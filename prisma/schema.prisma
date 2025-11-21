@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL") 
+}
+
+model cargos {
+  id_cargo     Int            @id @default(autoincrement())
+  nome_cargo   String         @unique(map: "nome_cargo_UNIQUE") @db.VarChar(100)
+  funcionarios funcionarios[]
+}
+
+model categoria {
+  id_categoria Int        @id @default(autoincrement())
+  nome         String     @unique(map: "nome_UNIQUE") @db.VarChar(45)
+  produtos     produtos[]
+}
+
+model clientes {
+  id_cliente Int        @id @default(autoincrement())
+  nome       String     @db.VarChar(20)
+  sobre_nome String     @db.VarChar(45)
+  senha      String     @db.VarChar(1000)
+  contato    contato[]
+  endereco   endereco[]
+  pedidos    pedidos[]
+}
+
+model contato {
+  id_contato     Int           @id @default(autoincrement())
+  telefone       String        @unique(map: "telefone_UNIQUE") @db.VarChar(30)
+  email          String        @unique(map: "email_UNIQUE") @db.VarChar(300)
+  id_cliente     Int?
+  id_funcionario Int?
+  clientes       clientes?     @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "fk_contato_cliente")
+  funcionarios   funcionarios? @relation(fields: [id_funcionario], references: [id_funcionario], onDelete: NoAction, onUpdate: NoAction, map: "fk_contato_funcionario")
+
+  @@index([id_cliente], map: "id_cliente_idx")
+  @@index([id_funcionario], map: "id_funcionario_idx")
+}
+
+model endereco {
+  id_endereco    Int           @id @default(autoincrement())
+  logradouro     String        @db.VarChar(100)
+  numero         String        @db.VarChar(45)
+  complemento    String?       @db.VarChar(100)
+  id_cliente     Int?
+  id_funcionario Int?
+  clientes       clientes?     @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "fk_endereco_cliente")
+  funcionarios   funcionarios? @relation(fields: [id_funcionario], references: [id_funcionario], onDelete: NoAction, onUpdate: NoAction, map: "fk_endereco_funcionario")
+  pedidos        pedidos[]
+
+  @@index([id_cliente], map: "id_cliente_idx")
+  @@index([id_funcionario], map: "id_funcionario_idx")
+}
+
+model funcionarios {
+  id_funcionario   Int        @id @default(autoincrement())
+  nome             String     @db.VarChar(100)
+  senha            String     @db.VarChar(1000)
+  matricula        String     @unique(map: "matricula_UNIQUE") @db.VarChar(45)
+  data_contratacao DateTime   @db.Date
+  salario_base     Decimal    @db.Decimal(10, 2)
+  ativo            Int        @db.TinyInt
+  id_cargo         Int
+  contato          contato[]
+  endereco         endereco[]
+  cargos           cargos     @relation(fields: [id_cargo], references: [id_cargo], onDelete: NoAction, onUpdate: NoAction, map: "fk_funcionarios_cargo")
+  pedidos          pedidos[]
+
+  @@index([id_cargo], map: "id_cargo_idx")
+}
+
+model itens_pedido {
+  id_itensPedido Int      @id @default(autoincrement())
+  id_pedido      Int
+  id_produto     Int
+  quantidade     Int
+  observacoes    String?  @db.VarChar(255)
+  pedidos        pedidos  @relation(fields: [id_pedido], references: [id_pedido], onDelete: NoAction, onUpdate: NoAction, map: "fk_itenspedido_pedido")
+  produtos       produtos @relation(fields: [id_produto], references: [id_produto], onDelete: NoAction, onUpdate: NoAction, map: "fk_itenspedido_produto")
+
+  @@index([id_pedido], map: "id_pedido_idx")
+  @@index([id_produto], map: "id_produto_idx")
+}
+
+model mesas {
+  id_mesa     Int       @id @default(autoincrement())
+  nomero_mesa String    @unique(map: "nomero_mesa_UNIQUE") @db.VarChar(45)
+  pedidos     pedidos[]
+}
+
+model pedidos {
+  id_pedido          Int                   @id @default(autoincrement())
+  data_hora_abertura DateTime              @default(now()) @db.Timestamp(0)
+  data_hora_entrega  DateTime?             @db.Timestamp(0)
+  status_pedido      pedidos_status_pedido
+  observacoes        String?               @db.VarChar(250)
+  id_cliente         Int
+  id_mesa            Int?
+  id_funcionario     Int
+  id_endereco        Int?
+  itens_pedido       itens_pedido[]
+  clientes           clientes              @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "fk_pedidos_cliente")
+  endereco           endereco?             @relation(fields: [id_endereco], references: [id_endereco], onDelete: NoAction, onUpdate: NoAction, map: "fk_pedidos_endereco")
+  funcionarios       funcionarios          @relation(fields: [id_funcionario], references: [id_funcionario], onDelete: NoAction, onUpdate: NoAction, map: "fk_pedidos_funcionario")
+  mesas              mesas?                @relation(fields: [id_mesa], references: [id_mesa], onDelete: NoAction, onUpdate: NoAction, map: "fk_pedidos_mesa")
+
+  @@index([id_cliente], map: "id_cliente_idx")
+  @@index([id_endereco], map: "id_endereco_idx")
+  @@index([id_funcionario], map: "id_funcionario_idx")
+  @@index([id_mesa], map: "id_mesa_idx")
+}
+
+model produtos {
+  id_produto    Int            @id @default(autoincrement())
+  nome          String         @unique(map: "nome_UNIQUE") @db.VarChar(45)
+  preco         Decimal        @db.Decimal(10, 2)
+  descricao     String         @db.VarChar(45)
+  disponivel    Int            @db.TinyInt
+  tempo_preparo Int            @db.SmallInt
+  id_categoria  Int
+  itens_pedido  itens_pedido[]
+  categoria     categoria      @relation(fields: [id_categoria], references: [id_categoria], onDelete: NoAction, onUpdate: NoAction, map: "fk_produtos_categoria")
+
+  @@index([id_categoria], map: "id_categoria_idx")
+}
+
+enum pedidos_status_pedido {
+  em_preparo @map("em preparo")
+  pronto
+  entregue
+  cancelado
+}
